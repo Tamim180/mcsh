@@ -1,0 +1,15 @@
+[package]
+name = "mcsh"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "mcsh"
+path = "src/main.rs"
+
+[dependencies]
+rustyline = "=11.0.0"
+rustyline-derive = "=0.8.0"
+colored = "2.1"
+home = "=0.5.9"
+shellexpand = "3.1"
