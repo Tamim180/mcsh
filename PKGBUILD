@@ -8,7 +8,7 @@ license=('MIT')
 depends=('gcc-libs')
 makedepends=('cargo' 'git')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/Tamim180/mcsh/archive/refs/tags/v${pkgver}.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('a90aa64f166e9023e8ac1dcf56679a68303ad67ad4672763936d9294a7c387c3')
 
 build() {
     cd "$srcdir/$pkgname-$pkgver"

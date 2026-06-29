@@ -9,6 +9,6 @@ pkgbase = mcsh
 	makedepends = git
 	depends = gcc-libs
 	source = mcsh-0.1.2.tar.gz::https://github.com/Tamim180/mcsh/archive/refs/tags/v0.1.2.tar.gz
-	sha256sums = SKIP
+	sha256sums = a90aa64f166e9023e8ac1dcf56679a68303ad67ad4672763936d9294a7c387c3
 
 pkgname = mcsh
