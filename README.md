@@ -1,3 +1,5 @@
+# mcsh — Minecraft Shell
+
 ```
   ███╗   ███╗ ██████╗███████╗██╗  ██╗
   ████╗ ████║██╔════╝██╔════╝██║  ██║
@@ -7,42 +9,17 @@
   ╚═╝     ╚═╝ ╚═════╝╚══════╝╚═╝  ╚═╝
 ```
 
-# ⛏️ Minecraft Shell (mcsh)
-
-> A Minecraft-inspired Linux shell built in Rust where every command starts with `/`.
-
-`mcsh` transforms your Linux terminal into a Minecraft-like experience. Teleport through directories, build folders instead of creating them, smite processes, and chat simply by typing without a `/`.
+A Linux shell where every command starts with `/` — just like Minecraft.
+Text without a `/` is sent as chat. Written in Rust.
 
 ---
 
-## ✨ Features
+## Install
 
-* 🎮 Minecraft-inspired command system
-* 🦀 Written in Rust
-* 🌈 Built-in syntax highlighting
-* 💡 Built-in autosuggestions
-* ⚡ Built-in tab completion
-* 💬 Chat-style input for non-command text
-* 📁 File & directory management
-* ⚙️ Process management
-* 🖥️ Execute any shell command by prefixing it with `/`
-
----
-
-## 📦 Installation
-
-### Arch Linux (AUR)
-
-Using `yay`:
+### AUR (Arch / EndeavourOS / Manjaro)
 
 ```bash
 yay -S mcsh
-```
-
-Using `paru`:
-
-```bash
-paru -S mcsh
 ```
 
 ### Build from source
@@ -56,66 +33,110 @@ cargo build --release
 
 ---
 
-## 🎮 Command Examples
+## How it works
 
-| Minecraft   | Linux Equivalent |
-| ----------- | ---------------- |
-| `/tp`       | `cd`             |
-| `/spawn`    | `cd ~`           |
-| `/whereami` | `pwd`            |
-| `/list`     | `ls`             |
-| `/build`    | `mkdir`          |
-| `/destroy`  | `rm`             |
-| `/summon`   | `touch`          |
-| `/clone`    | `cp`             |
-| `/move`     | `mv`             |
-| `/read`     | `cat`            |
-| `/entities` | `ps`             |
-| `/smite`    | `kill`           |
-| `/lag`      | `top`            |
-| `/seed`     | `env`            |
-| `/clear`    | `clear`          |
-| `/kill`     | `exit`           |
+| Input | What happens |
+|---|---|
+| `/list` | Runs the mcsh command |
+| `/python3 script.py` | Falls back to raw bash |
+| `hello everyone` | Prints `<Steve> hello everyone` |
 
-> Unknown `/commands` are automatically executed as normal shell commands.
+Everything with a `/` runs. Everything without it is chat.
 
 ---
 
-## 📸 Example
+## Commands
 
-```text
-[tamim @ Overworld] ~/projects > /list
-📄 Cargo.toml
-📦 src
+### Navigation
+| Command | Alias | Does |
+|---|---|---|
+| `/tp <dir>` | `/cd` | Teleport to a directory |
+| `/spawn` | | Go to home directory |
+| `/whereami` | `/pwd` | Show current location |
 
-[tamim @ Overworld] ~/projects > ls
-<tamim> ls
+### Files & Directories
+| Command | Alias | Does |
+|---|---|---|
+| `/list [dir]` | `/ls` | List files with icons |
+| `/build <dir>` | `/mkdir` | Create a directory |
+| `/destroy <path>` | `/rm` | Delete a file or folder |
+| `/summon <file>` | `/touch` | Create an empty file |
+| `/clone <src> <dst>` | `/cp` | Copy a file |
+| `/move <src> <dst>` | `/mv` | Move or rename |
+| `/read <file>` | `/cat` | Print file contents |
 
-[tamim @ Overworld] ~/projects > /tp src
+### Permissions
+| Command | Alias | Does |
+|---|---|---|
+| `/enchant <file> <mode>` | | chmod |
+| `/op <file>` | | chown to root |
 
-[tamim @ Overworld] ~/projects/src > /read main.rs
-```
+### System
+| Command | Alias | Does |
+|---|---|---|
+| `/entities` | `/ps` | List running processes |
+| `/smite <pid>` | | Kill a process |
+| `/lag` | `/top` | Show resource usage |
+| `/seed` | `/env` | Show environment variables |
+
+### Builtins
+| Command | Does |
+|---|---|
+| `/help` | Show all commands |
+| `/say <msg>` | Print a message (yellow) |
+| `/me <action>` | Narrate an action |
+| `/gamemode <mode>` | creative / survival / hardcore / spectator |
+| `/give <player> <file>` | Copy a file to another user's home |
+| `/history` | Show command history |
+| `/clear` | Clear the screen |
+| `/kill` | Exit the shell |
+
+### Any other `/command`
+Falls back to raw bash — so `/git status`, `/python3 app.py`, `/vim file.txt` all just work.
 
 ---
 
-## 🚀 Roadmap
+## Features
 
-* [ ] Config file support
-* [ ] Themes
-* [ ] More Minecraft-inspired commands
-* [ ] Plugin system
-* [ ] Windows support
+- **Tab completion** — completes `/commands` and file paths
+- **Syntax highlighting** — known commands in gold, unknown in red, args in cyan
+- **Autosuggestions** — fish-style ghost text as you type
+- **Biome-aware prompt** — prompt changes based on your current directory
 
-Ideas and pull requests are always welcome!
+| Directory | Biome |
+|---|---|
+| `~` | Spawn |
+| `/tmp` | Nether |
+| `/etc` | Stronghold |
+| `/dev` | The End |
+| `/usr` | Village |
+| `/var` | Cave |
+| `/home` | Plains |
+| anywhere else | Overworld |
+
+- **Chat** — anything typed without `/` shows as `<username> message`
+- **History** — saved to `~/.mcsh_history` between sessions
 
 ---
 
-## 🤝 Contributing
+## Built with
 
-Found a bug? Have an idea for a new command? Feel free to open an issue or submit a pull request.
+- [Rust](https://www.rust-lang.org/)
+- [rustyline](https://github.com/kkawakam/rustyline) — REPL, completion, highlighting, hints
+- [colored](https://github.com/colored-rs/colored) — terminal colors
 
 ---
 
-## 📄 License
+## Roadmap
 
-This project is licensed under the MIT License.
+- [ ] Pipe support (`/cat file.txt | /grep something`)
+- [ ] Config file (`~/.mcshrc`) for aliases and settings
+- [ ] More biomes
+- [ ] Set as login shell support
+- [ ] Plugin system
+
+---
+
+## License
+
+MIT
