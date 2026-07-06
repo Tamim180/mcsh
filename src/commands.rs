@@ -91,6 +91,11 @@ pub fn handle_command(input: &str) -> bool {
         return true;
     }
 
+    // Pipeline: /cmd1 arg | /cmd2 arg | /cmd3 arg
+    if input.contains('|') {
+        return handle_pipeline(input);
+    }
+
     let input = &input[1..]; // strip leading /
     let parts: Vec<&str> = input.splitn(2, ' ').collect();
     let cmd = parts[0].to_lowercase();
@@ -431,6 +436,7 @@ fn cmd_help() {
     }
 
     println!("{}", "💡 Tip: Any /command not listed above runs as a raw bash command.".dimmed());
+    println!("{}", "🔧 Tip: Chain raw commands with | e.g. /cat f.txt | /grep hi | /wc -l".dimmed());
     println!("{}", "💬 Tip: Text without / is sent as chat.\n".dimmed());
 }
 
@@ -443,12 +449,16 @@ fn cmd_raw(cmd: &str, args: &str) {
         args.split_whitespace().collect()
     };
 
+    reset_terminal();
+
     let status = Command::new(cmd)
         .args(&full_args)
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .status();
+
+    reset_terminal();
 
     match status {
         Ok(s) if s.success() => {}
@@ -473,6 +483,121 @@ fn run_raw_silent(cmd: &str, args: &[&str]) {
         .stderr(Stdio::inherit())
         .status()
         .ok();
+}
+
+// rustyline puts the terminal into raw mode while reading a line (so it can
+// handle keystrokes for tab-completion, history, etc.) and restores it when
+// readline() returns. In practice some termios flags — OPOST in particular,
+// which controls automatic \n -> \r\n translation — can come back in a
+// slightly different state than a normal login shell's terminal. Full-screen
+// ANSI programs (sl, lolcat, anything curses-ish) are sensitive to that and
+// render garbled as a result. Forcing the terminal back to sane defaults
+// right before/after handing control to a child fixes it. Silently a no-op
+// if `stty` isn't available or stdin isn't a real tty.
+fn reset_terminal() {
+    let _ = Command::new("stty")
+        .arg("sane")
+        .stdin(Stdio::inherit())
+        .status();
+}
+
+// ─── Pipelines ─────────────────────────────────────────────────────────────
+//
+// Supports chaining raw/bash commands together, Minecraft-style:
+//   /cat file.txt | /grep hello | /wc -l
+//
+// Each stage is spawned as its own process; stdout of one is wired directly
+// into stdin of the next via OS pipes (no buffering through Rust). Only the
+// final stage's stdout/stderr are inherited by the terminal — everything in
+// between is piped. Built-in commands (/list, /say, etc.) aren't part of the
+// pipeline system since they print directly rather than producing a child
+// process stdout to hook into; pipeline stages are treated as raw commands.
+
+fn handle_pipeline(input: &str) -> bool {
+    let stages: Vec<&str> = input.split('|').map(|s| s.trim()).collect();
+
+    if stages.iter().any(|s| s.is_empty()) {
+        error_msg("Invalid pipeline: empty command between pipes");
+        return true;
+    }
+
+    let mut parsed: Vec<(String, Vec<String>)> = Vec::with_capacity(stages.len());
+    for stage in &stages {
+        let stripped = stage.strip_prefix('/').unwrap_or(stage);
+        let mut words = stripped.split_whitespace();
+        let cmd = match words.next() {
+            Some(c) => c.to_string(),
+            None => {
+                error_msg("Invalid pipeline: empty command between pipes");
+                return true;
+            }
+        };
+        let args: Vec<String> = words.map(|s| s.to_string()).collect();
+        parsed.push((cmd, args));
+    }
+
+    if let Err(e) = run_pipeline(&parsed) {
+        error_msg(&format!("Pipeline failed: {}", e));
+    }
+
+    true
+}
+
+fn run_pipeline(stages: &[(String, Vec<String>)]) -> std::io::Result<()> {
+    use std::process::Child;
+
+    reset_terminal();
+
+    let n = stages.len();
+    let mut children: Vec<Child> = Vec::with_capacity(n);
+
+    for (i, (cmd, args)) in stages.iter().enumerate() {
+        let mut command = Command::new(cmd);
+        command.args(args);
+
+        // Wire stdin: first stage reads from the terminal, every other
+        // stage reads from the previous child's stdout pipe.
+        if i == 0 {
+            command.stdin(Stdio::inherit());
+        } else {
+            let prev_stdout = children[i - 1]
+                .stdout
+                .take()
+                .expect("previous pipeline stage had no stdout pipe");
+            command.stdin(Stdio::from(prev_stdout));
+        }
+
+        // Wire stdout: last stage prints to the terminal, every other
+        // stage's output gets piped into the next stage's stdin above.
+        command.stdout(if i == n - 1 { Stdio::inherit() } else { Stdio::piped() });
+        command.stderr(Stdio::inherit());
+
+        match command.spawn() {
+            Ok(child) => children.push(child),
+            Err(e) => {
+                // A stage failed to launch (e.g. command not found) —
+                // tear down anything already running so we don't leak
+                // orphaned processes mid-pipe.
+                for mut c in children {
+                    let _ = c.kill();
+                }
+                return Err(std::io::Error::new(
+                    e.kind(),
+                    format!("'/{}' — {}", cmd, e),
+                ));
+            }
+        }
+    }
+
+    // Wait left-to-right; earlier stages naturally finish once their
+    // output has been fully consumed downstream.
+    for mut child in children {
+        let _ = child.wait();
+    }
+
+    reset_terminal();
+
+    Ok(())
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
