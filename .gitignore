@@ -1,3 +1,4 @@
 /target
 .directory
 mcsh/
+*.tar.gz
