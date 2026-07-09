@@ -129,7 +129,7 @@ Falls back to raw bash — so `/git status`, `/python3 app.py`, `/vim file.txt` 
 
 ## Roadmap
 
-- [✅] Pipe support (`/cat file.txt | /grep something`)
+- ✅ Pipe support (`/cat file.txt | /grep something`)
 - [ ] Config file (`~/.mcshrc`) for aliases and settings
 - [ ] More biomes
 - [ ] Set as login shell support
